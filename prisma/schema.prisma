@@ -1,0 +1,252 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model Empresa {
+  id                  String           @id @default(cuid())
+  razaoSocial         String
+  nomeFantasia        String
+  cnpj                String           @unique
+  porte               String?
+  segmento            String?
+  endereco            String?
+  cidade              String?
+  estado              String?
+  telefone            String?
+  email               String?
+  responsavelNome     String?
+  responsavelCargo    String?
+  responsavelRegistro String?
+  createdAt           DateTime         @default(now())
+  updatedAt           DateTime         @updatedAt
+  avaliacoes          AvaliacaoRisco[]
+  indicadores         Indicador360[]
+  pgrs                PGR[]
+  questionarios       Questionario[]
+  setores             Setor[]
+  usuarios            Usuario[]
+}
+
+model Usuario {
+  id        String   @id @default(cuid())
+  nome      String
+  email     String   @unique
+  senha     String
+  papel     String   @default("ADMIN")
+  empresaId String?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  empresa   Empresa? @relation(fields: [empresaId], references: [id])
+}
+
+model Setor {
+  id                  String              @id @default(cuid())
+  nome                String
+  empresaId           String
+  totalColaboradores  Int                 @default(0)
+  turnos              String?
+  createdAt           DateTime            @default(now())
+  updatedAt           DateTime            @updatedAt
+  questionarioSetores QuestionarioSetor[]
+  empresa             Empresa             @relation(fields: [empresaId], references: [id])
+
+  @@unique([nome, empresaId])
+}
+
+model Questionario {
+  id         String              @id @default(cuid())
+  titulo     String
+  descricao  String?
+  tipo       String              @default("PSICOSSOCIAL")
+  status     String              @default("RASCUNHO")
+  dataInicio DateTime?
+  dataFim    DateTime?
+  empresaId  String
+  createdAt  DateTime            @default(now())
+  updatedAt  DateTime            @updatedAt
+  perguntas  Pergunta[]
+  empresa    Empresa             @relation(fields: [empresaId], references: [id])
+  setores    QuestionarioSetor[]
+  respostas  Resposta[]
+}
+
+model QuestionarioSetor {
+  id             String       @id @default(cuid())
+  questionarioId String
+  setorId        String
+  linkAnonimo    String       @unique @default(cuid())
+  totalEsperado  Int          @default(0)
+  createdAt      DateTime     @default(now())
+  questionario   Questionario @relation(fields: [questionarioId], references: [id], onDelete: Cascade)
+  setor          Setor        @relation(fields: [setorId], references: [id])
+
+  @@unique([questionarioId, setorId])
+}
+
+model Pergunta {
+  id             String         @id @default(cuid())
+  texto          String
+  categoria      String
+  subcategoria   String?
+  fatorNR1       String?
+  fatorISO45003  String?
+  tipoResposta   String         @default("ESCALA")
+  escalaMin      Int            @default(1)
+  escalaMax      Int            @default(5)
+  escalaMinLabel String?
+  escalaMaxLabel String?
+  obrigatoria    Boolean        @default(true)
+  ordem          Int
+  peso           Float          @default(1.0)
+  invertida      Boolean        @default(false)
+  questionarioId String
+  createdAt      DateTime       @default(now())
+  questionario   Questionario   @relation(fields: [questionarioId], references: [id], onDelete: Cascade)
+  respostaItens  RespostaItem[]
+}
+
+model Resposta {
+  id             String         @id @default(cuid())
+  questionarioId String
+  setor          String?
+  turno          String?
+  faixaEtaria    String?
+  tempoEmpresa   String?
+  tokenResposta  String         @unique @default(cuid())
+  completada     Boolean        @default(false)
+  dataResposta   DateTime       @default(now())
+  questionario   Questionario   @relation(fields: [questionarioId], references: [id])
+  itens          RespostaItem[]
+}
+
+model RespostaItem {
+  id            String   @id @default(cuid())
+  respostaId    String
+  perguntaId    String
+  valorNumerico Int?
+  valorTexto    String?
+  pergunta      Pergunta @relation(fields: [perguntaId], references: [id])
+  resposta      Resposta @relation(fields: [respostaId], references: [id], onDelete: Cascade)
+}
+
+model AvaliacaoRisco {
+  id                  String    @id @default(cuid())
+  questionarioId      String
+  categoria           String
+  subcategoria        String?
+  fatorNR1            String?
+  probabilidade       Int
+  severidade          Int
+  nivelRisco          Int
+  classificacao       String
+  mediaPontuacao      Float
+  totalRespostas      Int
+  percentualCritico   Float?
+  descricaoPerigo     String?
+  consequencias       String?
+  medidasExistentes   String?
+  medidasRecomendadas String?
+  responsavel         String?
+  prazo               DateTime?
+  statusAcao          String    @default("PENDENTE")
+  empresaId           String
+  createdAt           DateTime  @default(now())
+  updatedAt           DateTime  @updatedAt
+  empresa             Empresa   @relation(fields: [empresaId], references: [id])
+}
+
+model PGR {
+  id                     String    @id @default(cuid())
+  titulo                 String
+  versao                 Int       @default(1)
+  status                 String    @default("RASCUNHO")
+  dataElaboracao         DateTime  @default(now())
+  dataRevisao            DateTime?
+  questionarioId         String?
+  periodoAvaliacao       String?
+  totalRespondentes      Int?
+  totalColaboradores     Int?
+  taxaParticipacao       Float?
+  objetivos              String?
+  escopo                 String?
+  responsabilidades      String?
+  metodologia            String?
+  inventarioJSON         String?
+  matrizRiscoJSON        String?
+  indicadoresJSON        String?
+  analiseSetoresJSON     String?
+  medidasJSON            String?
+  planoAcaoJSON          String?
+  cronogramaJSON         String?
+  conformidadeJSON       String?
+  aprJSON                String?
+  relatorioAvalJSON      String?
+  monitoramentoJSON      String?
+  politicaSST            String?
+  comunicacaoJSON        String?
+  relatorioISO45003JSON  String?
+  indicadoresSaudeJSON   String?
+  declaracaoConformidade String?
+  parecerTecnico         String?
+  empresaId              String
+  createdAt              DateTime  @default(now())
+  updatedAt              DateTime  @updatedAt
+  empresa                Empresa   @relation(fields: [empresaId], references: [id])
+}
+
+model Indicador360 {
+  id                       String   @id @default(cuid())
+  periodo                  String
+  totalFuncionarios        Int
+  totalAfastamentos        Int
+  diasPerdidos             Int
+  taxaAbsenteismo          Float?
+  principaisCausas         String?
+  admissoes                Int      @default(0)
+  desligamentos            Int      @default(0)
+  taxaRotatividade         Float?
+  tempoMedioPermanencia    Float?
+  npsInterno               Float?
+  taxaRespostaQuestionario Float?
+  empresaId                String
+  createdAt                DateTime @default(now())
+  empresa                  Empresa  @relation(fields: [empresaId], references: [id])
+}
+
+model MedidaControle {
+  id              String   @id @default(cuid())
+  categoria       String
+  fatorNR1        String?
+  nivelRisco      String
+  tipo            String
+  titulo          String
+  descricao       String
+  responsavel     String?
+  prazoSugerido   String?
+  referenciaLegal String?
+  prioridade      Int      @default(1)
+  ativo           Boolean  @default(true)
+  createdAt       DateTime @default(now())
+
+  @@index([categoria, nivelRisco])
+}
+
+model CausaProvavel {
+  id                   String   @id @default(cuid())
+  categoria            String
+  fatorNR1             String?
+  titulo               String
+  descricao            String
+  impactos             String?
+  indicadorRelacionado String?
+  evidencia            String?
+  ativo                Boolean  @default(true)
+  createdAt            DateTime @default(now())
+
+  @@index([categoria])
+}
