@@ -1,9 +1,8 @@
-﻿// src/app/dashboard/pgr/page.tsx
+// src/app/dashboard/pgr/page.tsx
 
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
-import { exportarAbaPDF } from './exportarPDF'
 
 // ============================================================
 // TIPOS
@@ -322,292 +321,6 @@ interface PGRCompleto {
   declaracaoConformidade: string | null
 }
 
-
-// ============================================================
-// COMPONENTE: FormatarDocumentoEstruturado
-// ============================================================
-
-interface DocumentoEstruturadoProps {
-  texto: string
-  icone?: string
-  corPrimaria?: string
-  corSecundaria?: string
-}
-
-function FormatarDocumentoEstruturado({ 
-  texto, 
-  icone = '\u{1F4C4}', 
-  corPrimaria = '#1e40af', 
-  corSecundaria = '#eff6ff' 
-}: DocumentoEstruturadoProps) {
-  
-  interface Secao {
-    tipo: 'titulo' | 'metadados' | 'secao' | 'texto'
-    titulo?: string
-    subtitulo?: string
-    numero?: string
-    conteudo: string[]
-    metadados?: { chave: string; valor: string }[]
-  }
-
-  const linhas = texto.split('\n')
-  const secoes: Secao[] = []
-  let secaoAtual: Secao | null = null
-  const metadados: { chave: string; valor: string }[] = []
-  let tituloPrincipal = ''
-  let subtituloPrincipal = ''
-  let faseInicial = true
-
-  const finalizarSecao = () => {
-    if (secaoAtual) {
-      secoes.push(secaoAtual)
-      secaoAtual = null
-    }
-  }
-
-  for (let i = 0; i < linhas.length; i++) {
-    const linha = linhas[i]
-    const trimmed = linha.trim()
-
-    if (!trimmed) continue
-
-    if (!tituloPrincipal && trimmed === trimmed.toUpperCase() && trimmed.length > 10 && !/^\d+\./.test(trimmed) && !/^\[/.test(trimmed) && !/^-/.test(trimmed)) {
-      tituloPrincipal = trimmed
-      continue
-    }
-
-    if (tituloPrincipal && !subtituloPrincipal && faseInicial && trimmed === trimmed.toUpperCase() && trimmed.length > 10 && !/^\d+\./.test(trimmed) && !/^\[/.test(trimmed) && !/^-/.test(trimmed) && !trimmed.includes(':')) {
-      subtituloPrincipal = trimmed
-      continue
-    }
-
-    if (faseInicial && /^[A-Za-z\u00C0-\u00FA\s]+:\s*.+/.test(trimmed) && !/^\d+\./.test(trimmed) && !trimmed.startsWith('[') && !trimmed.startsWith('-')) {
-      const idx = trimmed.indexOf(':')
-      const chave = trimmed.substring(0, idx).trim()
-      const valor = trimmed.substring(idx + 1).trim()
-      if (chave.length < 40) {
-        metadados.push({ chave, valor })
-        continue
-      }
-    }
-
-    const matchSecao = trimmed.match(/^(\d+\.?\d*\.?)\s+(.+)/)
-    if (matchSecao && matchSecao[2] === matchSecao[2].toUpperCase() && matchSecao[2].length > 2) {
-      faseInicial = false
-      finalizarSecao()
-      secaoAtual = {
-        tipo: 'secao',
-        numero: matchSecao[1],
-        titulo: matchSecao[2],
-        conteudo: []
-      }
-      continue
-    }
-
-    if (secaoAtual && secaoAtual.tipo === 'secao') {
-      secaoAtual.conteudo.push(trimmed)
-      continue
-    }
-
-    if (faseInicial) {
-      if (/^[A-Za-z\u00C0-\u00FA\s]+:\s*.+/.test(trimmed)) {
-        const idx = trimmed.indexOf(':')
-        metadados.push({ chave: trimmed.substring(0, idx).trim(), valor: trimmed.substring(idx + 1).trim() })
-      }
-    } else {
-      if (!secaoAtual) {
-        secaoAtual = { tipo: 'texto', conteudo: [trimmed] }
-      } else {
-        secaoAtual.conteudo.push(trimmed)
-      }
-    }
-  }
-  finalizarSecao()
-
-  const iconeSecao = (numero: string): string => {
-    const mapa: Record<string, string> = {
-      '1': '\u{1F4CB}', '1.': '\u{1F4CB}',
-      '2': '\u{1F4CA}', '2.': '\u{1F4CA}',
-      '3': '\u{1F4C2}', '3.': '\u{1F4C2}',
-      '4': '\u{1F4A1}', '4.': '\u{1F4A1}',
-      '5': '\u{1F3AF}', '5.': '\u{1F3AF}',
-      '5.1': '\u{26A0}\u{FE0F}', '5.2': '\u{1F534}',
-      '6': '\u{1F465}', '6.': '\u{1F465}',
-      '7': '\u{1F4DE}', '7.': '\u{1F4DE}',
-      '8': '\u{1F504}', '8.': '\u{1F504}',
-      '9': '\u{2696}\u{FE0F}', '9.': '\u{2696}\u{FE0F}',
-    }
-    return mapa[numero] || '\u{1F4CC}'
-  }
-
-  const renderLinha = (linha: string, idx: number) => {
-    const trimmed = linha.trim()
-    if (!trimmed) return null
-
-    if (/^_{5,}/.test(trimmed)) {
-      return (
-        <div key={idx} style={{ borderTop: '2px solid #334155', width: '60%', margin: '24px 0 8px', paddingTop: 8 }}>
-          <span style={{ fontSize: 12, color: '#94a3b8' }}>Assinatura / Respons\u00E1vel</span>
-        </div>
-      )
-    }
-
-    if (/^\[X\]\s+/.test(trimmed)) {
-      const conteudo = trimmed.replace(/^\[X\]\s+/, '')
-      return (
-        <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 12px', background: '#f0fdf4', borderRadius: 8, marginBottom: 6, borderLeft: '3px solid #16a34a' }}>
-          <span style={{ color: '#16a34a', fontSize: 18, marginTop: -2, flexShrink: 0 }}>{'\u2705'}</span>
-          <span style={{ fontSize: 13, color: '#166534', fontWeight: 600, lineHeight: 1.5 }}>{conteudo}</span>
-        </div>
-      )
-    }
-
-    if (/^\s*-\s+/.test(linha) && linha.startsWith('    ')) {
-      const conteudo = trimmed.replace(/^-\s+/, '')
-      return (
-        <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, padding: '4px 12px 4px 44px', marginBottom: 2 }}>
-          <span style={{ color: '#94a3b8', fontSize: 10, marginTop: 4, flexShrink: 0 }}>{'\u25CF'}</span>
-          <span style={{ fontSize: 12, color: '#64748b', lineHeight: 1.5 }}>{conteudo}</span>
-        </div>
-      )
-    }
-
-    const matchLetra = trimmed.match(/^([a-z]\))\s+(.+)/)
-    if (matchLetra) {
-      return (
-        <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '6px 0', marginBottom: 2 }}>
-          <span style={{ 
-            background: corPrimaria, color: '#fff', fontSize: 11, fontWeight: 700, 
-            width: 24, height: 24, borderRadius: '50%', display: 'flex', alignItems: 'center', 
-            justifyContent: 'center', flexShrink: 0, marginTop: 1 
-          }}>
-            {matchLetra[1].replace(')', '')}
-          </span>
-          <span style={{ fontSize: 13, color: '#334155', lineHeight: 1.6 }}>{matchLetra[2]}</span>
-        </div>
-      )
-    }
-
-    if (/^-\s+/.test(trimmed)) {
-      const conteudo = trimmed.replace(/^-\s+/, '')
-      return (
-        <div key={idx} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '5px 0', marginBottom: 2 }}>
-          <span style={{ color: corPrimaria, fontSize: 8, marginTop: 6, flexShrink: 0 }}>{'\u25C6'}</span>
-          <span style={{ fontSize: 13, color: '#334155', lineHeight: 1.6 }}>{conteudo}</span>
-        </div>
-      )
-    }
-
-    if (/^[A-Za-z\u00C0-\u00FA\s]+:\s*.+/.test(trimmed) && trimmed.indexOf(':') < 35) {
-      const idxColon = trimmed.indexOf(':')
-      const chave = trimmed.substring(0, idxColon).trim()
-      const valor = trimmed.substring(idxColon + 1).trim()
-      return (
-        <div key={idx} style={{ display: 'flex', gap: 8, padding: '4px 0', marginBottom: 2 }}>
-          <span style={{ fontSize: 13, color: '#64748b', fontWeight: 600, minWidth: 'fit-content' }}>{chave}:</span>
-          <span style={{ fontSize: 13, color: '#1e293b' }}>{valor}</span>
-        </div>
-      )
-    }
-
-    return (
-      <p key={idx} style={{ fontSize: 13, color: '#334155', lineHeight: 1.7, margin: '6px 0' }}>{trimmed}</p>
-    )
-  }
-
-  return (
-    <div>
-      <div style={{ 
-        background: `linear-gradient(135deg, ${corPrimaria}, ${corPrimaria}dd)`, 
-        borderRadius: '12px 12px 0 0', padding: '28px 32px', color: '#fff', position: 'relative', overflow: 'hidden' 
-      }}>
-        <div style={{ position: 'absolute', top: -20, right: -20, fontSize: 120, opacity: 0.07 }}>{icone}</div>
-        <div style={{ fontSize: 14, opacity: 0.8, marginBottom: 6, fontWeight: 500, letterSpacing: 1, textTransform: 'uppercase' as const }}>Documento Oficial</div>
-        <h2 style={{ fontSize: 22, fontWeight: 800, margin: 0, lineHeight: 1.3, maxWidth: '85%' }}>{tituloPrincipal || 'Documento'}</h2>
-        {subtituloPrincipal && (
-          <p style={{ fontSize: 14, opacity: 0.85, marginTop: 8, fontWeight: 500 }}>{subtituloPrincipal}</p>
-        )}
-      </div>
-
-      {metadados.length > 0 && (
-        <div style={{ 
-          background: corSecundaria, padding: '16px 32px', display: 'flex', flexWrap: 'wrap' as const, 
-          gap: '12px 32px', borderBottom: '1px solid #e2e8f0' 
-        }}>
-          {metadados.map((m, i) => (
-            <div key={i} style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-              <span style={{ fontSize: 12, color: '#64748b', fontWeight: 600 }}>{m.chave}:</span>
-              <span style={{ fontSize: 13, color: '#1e293b', fontWeight: 700 }}>{m.valor}</span>
-            </div>
-          ))}
-        </div>
-      )}
-
-      <div style={{ padding: '24px 0' }}>
-        {secoes.map((secao, sIdx) => {
-          if (secao.tipo === 'secao') {
-            const temCheckbox = secao.conteudo.some(l => /^\[X\]/.test(l.trim()))
-            const temAssinatura = secao.conteudo.some(l => /^_{5,}/.test(l.trim()))
-
-            return (
-              <div key={sIdx} style={{ 
-                background: '#fff', borderRadius: 12, border: '1px solid #e2e8f0', 
-                marginBottom: 16, overflow: 'hidden',
-                boxShadow: '0 1px 3px rgba(0,0,0,0.04)' 
-              }}>
-                <div style={{ 
-                  display: 'flex', alignItems: 'center', gap: 12, padding: '16px 20px', 
-                  borderBottom: '1px solid #f1f5f9', background: '#fafbfc' 
-                }}>
-                  <span style={{ fontSize: 22 }}>{iconeSecao(secao.numero || '')}</span>
-                  <div>
-                    <span style={{ 
-                      fontSize: 11, color: corPrimaria, fontWeight: 700, 
-                      background: `${corPrimaria}15`, padding: '2px 8px', borderRadius: 4, marginRight: 8 
-                    }}>
-                      {`SE\u00C7\u00C3O ${secao.numero}`}
-                    </span>
-                    <span style={{ fontSize: 15, fontWeight: 700, color: '#1e293b' }}>{secao.titulo}</span>
-                  </div>
-                </div>
-
-                <div style={{ padding: '16px 20px' }}>
-                  {temCheckbox ? (
-                    <div style={{ display: 'flex', flexDirection: 'column' as const, gap: 2 }}>
-                      {secao.conteudo.map((l, lIdx) => renderLinha(l, lIdx))}
-                    </div>
-                  ) : temAssinatura ? (
-                    <div style={{ textAlign: 'center' as const, padding: '16px 0' }}>
-                      {secao.conteudo.map((l, lIdx) => {
-                        if (/^_{5,}/.test(l.trim())) {
-                          return (
-                            <div key={lIdx} style={{ margin: '24px auto 8px', width: '50%' }}>
-                              <div style={{ borderTop: '2px solid #334155' }}></div>
-                            </div>
-                          )
-                        }
-                        return <p key={lIdx} style={{ fontSize: 13, color: '#334155', margin: '4px 0' }}>{l.trim()}</p>
-                      })}
-                    </div>
-                  ) : (
-                    secao.conteudo.map((l, lIdx) => renderLinha(l, lIdx))
-                  )}
-                </div>
-              </div>
-            )
-          }
-
-          return (
-            <div key={sIdx} style={{ padding: '0 20px', marginBottom: 12 }}>
-              {secao.conteudo.map((l, lIdx) => renderLinha(l, lIdx))}
-            </div>
-          )
-        })}
-      </div>
-    </div>
-  )
-}
-
 // ============================================================
 // COMPONENTE PRINCIPAL
 // ============================================================
@@ -785,20 +498,6 @@ export default function PGRPage() {
               Versao {pgr.versao} | Periodo: {pgr.periodoAvaliacao} | Status: {pgr.status}
             </p>
           </div>
-          <button
-            onClick={() => {
-              const abaAtual = abas.find(a => a.key === abaAtiva)
-              if (abaAtual) exportarAbaPDF(pgr, abaAtual.key, abaAtual.label)
-            }}
-            style={{
-              padding: '10px 20px', background: '#2563eb', color: '#fff', border: 'none',
-              borderRadius: 8, cursor: 'pointer', fontSize: 13, fontWeight: 600,
-              display: 'flex', alignItems: 'center', gap: 6, whiteSpace: 'nowrap',
-              boxShadow: '0 1px 3px rgba(0,0,0,0.1)', alignSelf: 'center', height: 'fit-content'
-            }}
-          >
-            📄 Exportar PDF
-          </button>
         </div>
 
         <div style={{ display: 'flex', gap: 2, marginBottom: 24, overflowX: 'auto', borderBottom: '2px solid #e2e8f0', paddingBottom: 0 }}>
@@ -1619,20 +1318,13 @@ export default function PGRPage() {
 
         {/* ========== ABA: POLITICA SST ========== */}
         {abaAtiva === 'politica' && (
-          <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+          <div style={cardStyle}>
             {!pgr.politicaSST ? (
               <div style={{ textAlign: 'center', padding: 48 }}>
-                <p style={{ fontSize: 48, marginBottom: 8 }}>{'\u{1F4DC}'}</p>
-                <p style={{ color: '#94a3b8', fontSize: 16, fontWeight: 600 }}>Pol{'\u00ED'}tica SST n{'\u00E3'}o dispon{'\u00ED'}vel neste PGR.</p>
-                <p style={{ color: '#cbd5e1', fontSize: 13, marginTop: 4 }}>Gere um novo PGR para incluir este documento.</p>
+                <p style={{ color: '#94a3b8', fontSize: 16 }}>Politica SST nao disponivel neste PGR.</p>
               </div>
             ) : (
-              <FormatarDocumentoEstruturado 
-                texto={pgr.politicaSST} 
-                icone={'\u{1F4DC}'} 
-                corPrimaria="#7c3aed" 
-                corSecundaria="#f5f3ff" 
-              />
+              <pre style={preStyle}>{pgr.politicaSST}</pre>
             )}
           </div>
         )}
@@ -1697,40 +1389,26 @@ export default function PGRPage() {
 
         {/* ========== ABA: DECLARACAO DE CONFORMIDADE ========== */}
         {abaAtiva === 'declaracao' && (
-          <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+          <div style={cardStyle}>
             {!pgr.declaracaoConformidade ? (
               <div style={{ textAlign: 'center', padding: 48 }}>
-                <p style={{ fontSize: 48, marginBottom: 8 }}>{'\u2714\uFE0F'}</p>
-                <p style={{ color: '#94a3b8', fontSize: 16, fontWeight: 600 }}>Declara{'\u00E7'}{'\u00E3'}o de Conformidade n{'\u00E3'}o dispon{'\u00ED'}vel.</p>
-                <p style={{ color: '#cbd5e1', fontSize: 13, marginTop: 4 }}>Gere um novo PGR para incluir este documento.</p>
+                <p style={{ color: '#94a3b8', fontSize: 16 }}>Declaracao de Conformidade nao disponivel.</p>
               </div>
             ) : (
-              <FormatarDocumentoEstruturado 
-                texto={pgr.declaracaoConformidade} 
-                icone={'\u2714\uFE0F'} 
-                corPrimaria="#0f766e" 
-                corSecundaria="#f0fdfa" 
-              />
+              <pre style={preStyle}>{pgr.declaracaoConformidade}</pre>
             )}
           </div>
         )}
 
         {/* ========== ABA: PARECER TECNICO ========== */}
         {abaAtiva === 'parecer' && (
-          <div style={{ ...cardStyle, padding: 0, overflow: 'hidden' }}>
+          <div style={cardStyle}>
             {!pgr.parecerTecnico ? (
               <div style={{ textAlign: 'center', padding: 48 }}>
-                <p style={{ fontSize: 48, marginBottom: 8 }}>{'\u{1F4DD}'}</p>
-                <p style={{ color: '#94a3b8', fontSize: 16, fontWeight: 600 }}>Parecer T{'\u00E9'}cnico n{'\u00E3'}o dispon{'\u00ED'}vel.</p>
-                <p style={{ color: '#cbd5e1', fontSize: 13, marginTop: 4 }}>Gere um novo PGR para incluir este documento.</p>
+                <p style={{ color: '#94a3b8', fontSize: 16 }}>Parecer Tecnico nao disponivel.</p>
               </div>
             ) : (
-              <FormatarDocumentoEstruturado 
-                texto={pgr.parecerTecnico} 
-                icone={'\u{1F4DD}'} 
-                corPrimaria="#1e40af" 
-                corSecundaria="#eff6ff" 
-              />
+              <pre style={preStyle}>{pgr.parecerTecnico}</pre>
             )}
           </div>
         )}

@@ -567,7 +567,165 @@ function gerarDeclaracaoConformidade(
   decl += `${dataAtual}\n`
   return decl
 }
+// ============================================================
+// DOCUMENTO 01 — APRESENTAÇÃO DO PROGRAMA
+// ============================================================
 
+function gerarDoc01Apresentacao(
+  empresa: {
+    razaoSocial: string; nomeFantasia: string; cnpj: string;
+    endereco: string | null; cidade: string | null; estado: string | null; cep: string | null;
+    cnae: string | null; descricaoCnae: string | null; grauRisco: string | null;
+    telefone: string | null; email: string | null;
+    responsavelNome: string | null; responsavelCargo: string | null; responsavelRegistro: string | null;
+    porte: string | null; segmento: string | null;
+  },
+  setores: Array<{ nome: string; totalColaboradores: number; turnos: string | null }>,
+  totalColaboradores: number,
+  totalRespostas: number,
+  totalFatoresAvaliados: number,
+  periodoAvaliacao: string,
+  versao: number
+): Record<string, unknown> {
+  const dataAtual = new Date().toLocaleDateString('pt-BR')
+  const taxaParticipacao = totalColaboradores > 0
+    ? Math.round((totalRespostas / totalColaboradores) * 100 * 100) / 100
+    : null
+
+  const enderecoCompleto = [
+    empresa.endereco, empresa.cidade, empresa.estado,
+    empresa.cep ? `CEP: ${empresa.cep}` : null
+  ].filter(Boolean).join(' — ')
+
+  return {
+    titulo: 'Documento 01 — Apresentacao do Programa',
+    subtitulo: 'Programa de Gerenciamento de Riscos — Fatores Psicossociais',
+    versaoDocumento: `v${versao}`,
+    dataElaboracao: dataAtual,
+    statusDocumento: 'Vigente',
+
+    identificacaoEmpresa: {
+      razaoSocial: empresa.razaoSocial,
+      nomeFantasia: empresa.nomeFantasia,
+      cnpj: empresa.cnpj,
+      endereco: enderecoCompleto || 'Nao informado',
+      telefone: empresa.telefone || 'Nao informado',
+      email: empresa.email || 'Nao informado',
+      cnae: empresa.cnae || 'Nao informado',
+      descricaoCnae: empresa.descricaoCnae || 'Nao informado',
+      grauRisco: empresa.grauRisco || 'Nao informado',
+      porte: empresa.porte || 'Nao informado',
+      segmento: empresa.segmento || 'Nao informado'
+    },
+
+    responsavelTecnico: {
+      nome: empresa.responsavelNome || 'A definir',
+      cargo: empresa.responsavelCargo || 'A definir',
+      registro: empresa.responsavelRegistro || 'A definir'
+    },
+
+    estruturaOrganizacional: {
+      totalColaboradores,
+      totalSetores: setores.length,
+      setores: setores.map(s => ({
+        nome: s.nome,
+        totalColaboradores: s.totalColaboradores,
+        turnos: s.turnos || 'Nao informado'
+      }))
+    },
+
+    objetivoPrograma: 'Estabelecer o gerenciamento sistematico dos riscos psicossociais no ambiente de trabalho, contemplando a identificacao de perigos, avaliacao de riscos, definicao de medidas de prevencao e controle, e o monitoramento continuo, em conformidade com a NR-1 (Gerenciamento de Riscos Ocupacionais) e as diretrizes da ISO 45003:2021.',
+
+    escopoPrograma: `Este programa abrange todos os trabalhadores, gestores, terceirizados e estagiarios da empresa ${empresa.nomeFantasia}, em todas as suas unidades e operacoes, contemplando a avaliacao de fatores de risco psicossocial relacionados a organizacao do trabalho, relacoes interpessoais, condicoes do ambiente, carga de trabalho, autonomia, reconhecimento e demais dimensoes previstas na ISO 45003:2021.`,
+
+    fundamentacaoLegal: [
+      { norma: 'NR-1 — Disposicoes Gerais e Gerenciamento de Riscos Ocupacionais', referencia: 'Portaria SEPRT n. 6.730/2020', aplicacao: 'Estabelece a obrigatoriedade do PGR, incluindo riscos psicossociais no inventario de riscos e plano de acao.' },
+      { norma: 'NR-7 — Programa de Controle Medico de Saude Ocupacional (PCMSO)', referencia: 'Portaria SEPRT n. 6.734/2020', aplicacao: 'Inclusao dos riscos psicossociais no monitoramento da saude dos trabalhadores.' },
+      { norma: 'NR-17 — Ergonomia', referencia: 'Portaria MTP n. 423/2021', aplicacao: 'Avaliacao dos fatores de organizacao do trabalho que impactam a saude psicologica.' },
+      { norma: 'ISO 45003:2021', referencia: 'Gestao da saude e seguranca psicologica no trabalho', aplicacao: 'Diretrizes internacionais para identificacao e gestao de riscos psicossociais.' },
+      { norma: 'Lei 14.457/2022', referencia: 'Programa Emprega + Mulheres', aplicacao: 'Medidas de prevencao e combate ao assedio sexual e outras formas de violencia no trabalho.' },
+      { norma: 'Convencao OIT n. 190', referencia: 'Organizacao Internacional do Trabalho', aplicacao: 'Eliminacao da violencia e do assedio no mundo do trabalho.' }
+    ],
+
+    metodologiaAvaliacao: {
+      instrumento: 'Questionario anonimo estruturado com base na ISO 45003:2021',
+      escala: 'Escala Likert de 5 pontos (1 = Discordo Totalmente / 5 = Concordo Totalmente)',
+      classificacaoRisco: 'Matriz de Probabilidade x Severidade (5x5) conforme metodologia da NR-1',
+      processamento: 'Calculo de medias por categoria, distribuicao de respostas, percentual critico (notas 1 e 2), classificacao automatizada do nivel de risco',
+      periodoColeta: periodoAvaliacao,
+      amostra: {
+        totalColaboradores,
+        totalRespondentes: totalRespostas,
+        taxaParticipacao,
+        observacao: taxaParticipacao !== null && taxaParticipacao < 70
+          ? 'A taxa de participacao esta abaixo do recomendado (70%). Recomenda-se ampliar a adesao na proxima avaliacao.'
+          : taxaParticipacao !== null
+            ? 'Taxa de participacao adequada para representatividade da avaliacao.'
+            : 'Total de colaboradores nao informado. Nao foi possivel calcular a taxa de participacao.'
+      }
+    },
+
+    estruturaDocumental: {
+      descricao: 'O PGR de Riscos Psicossociais e composto pelos seguintes documentos tecnicos:',
+      documentos: [
+        { numero: '01', titulo: 'Apresentacao do Programa', descricao: 'Identificacao da empresa, escopo, objetivos, metodologia e estrutura do programa (este documento).' },
+        { numero: '02', titulo: 'Inventario de Riscos Psicossociais', descricao: 'Mapeamento detalhado de todos os fatores de risco identificados, com classificacao por nivel de risco.' },
+        { numero: '03', titulo: 'Matriz de Risco', descricao: 'Representacao visual da relacao Probabilidade x Severidade para cada fator avaliado.' },
+        { numero: '04', titulo: 'Analise Preliminar de Riscos (APR)', descricao: 'Analise tecnica de cada perigo identificado, com medidas de controle associadas.' },
+        { numero: '05', titulo: 'Relatorio de Avaliacao', descricao: 'Relatorio analitico com resultados gerais, distribuicao de riscos e conclusoes.' },
+        { numero: '06', titulo: 'Analise por Setor', descricao: 'Detalhamento dos resultados por setor/departamento da organizacao.' },
+        { numero: '07', titulo: 'Plano de Acao', descricao: 'Conjunto de medidas de prevencao e controle com responsaveis e prazos.' },
+        { numero: '08', titulo: 'Cronograma de Implementacao', descricao: 'Fases de implementacao das medidas com marcos temporais.' },
+        { numero: '09', titulo: 'Monitoramento e Reavaliacao', descricao: 'Indicadores de acompanhamento, metas e ciclo de reavaliacao.' },
+        { numero: '10', titulo: 'Conformidade Legal', descricao: 'Analise de conformidade com normas regulamentadoras e legislacao aplicavel.' },
+        { numero: '11', titulo: 'Relatorio ISO 45003', descricao: 'Analise de conformidade com a norma ISO 45003:2021.' },
+        { numero: '12', titulo: 'Indicadores de Saude Psicossocial', descricao: 'Metricas e KPIs de saude organizacional derivados da avaliacao.' },
+        { numero: '13', titulo: 'Politica de Saude Psicologica e Seguranca', descricao: 'Politica organizacional para gestao de riscos psicossociais.' },
+        { numero: '14', titulo: 'Plano de Comunicacao e Consulta', descricao: 'Estrategia de comunicacao dos resultados e consulta aos trabalhadores.' },
+        { numero: '15', titulo: 'Declaracao de Conformidade', descricao: 'Declaracao formal de conformidade com requisitos legais e normativos.' },
+        { numero: '16', titulo: 'Parecer Tecnico', descricao: 'Parecer tecnico conclusivo sobre a avaliacao realizada.' }
+      ]
+    },
+
+    responsabilidades: {
+      descricao: 'Atribuicoes e responsabilidades no ambito do PGR de Riscos Psicossociais:',
+      papeis: [
+        { papel: 'Alta Direcao / Empregador', atribuicoes: 'Prover recursos necessarios, aprovar politicas, garantir implementacao do programa, incluir riscos psicossociais no GRO.' },
+        { papel: 'Recursos Humanos', atribuicoes: 'Coordenar avaliacoes periodicas, implementar programas de bem-estar, monitorar indicadores de clima e saude, gerenciar plano de comunicacao.' },
+        { papel: 'SESMT', atribuicoes: 'Apoio tecnico na avaliacao, integracao com PCMSO e demais programas de SST, investigacao de incidentes relacionados a saude mental.' },
+        { papel: 'Gestores e Liderancas', atribuicoes: 'Executar medidas no dia a dia, identificacao precoce de riscos, suporte a equipe, participacao em capacitacoes.' },
+        { papel: 'CIPA', atribuicoes: 'Participar das avaliacoes de risco, acolher relatos dos trabalhadores, fiscalizar cumprimento das medidas, atuar na prevencao ao assedio.' },
+        { papel: 'Trabalhadores', atribuicoes: 'Participar ativamente das avaliacoes, relatar situacoes de risco, adotar praticas de autocuidado, contribuir para ambiente saudavel.' }
+      ]
+    },
+
+    vigenciaRevisao: {
+      vigencia: '12 meses a partir da data de elaboracao, ou ate que mudancas significativas exijam revisao antecipada.',
+      criteriosRevisaoAntecipada: [
+        'Mudancas significativas na organizacao do trabalho (reestruturacoes, fusoes, demissoes em massa)',
+        'Ocorrencia de incidentes graves relacionados a saude mental',
+        'Alteracoes na legislacao ou normas regulamentadoras aplicaveis',
+        'Deteccao de aumento significativo em indicadores de absenteismo, turnover ou afastamentos por CID-F',
+        'Solicitacao fundamentada do SESMT, CIPA ou representantes dos trabalhadores',
+        'Resultado de auditoria interna ou externa que identifique nao conformidades'
+      ],
+      proximaAvaliacao: (() => {
+        const proxima = new Date()
+        proxima.setFullYear(proxima.getFullYear() + 1)
+        return proxima.toLocaleDateString('pt-BR')
+      })()
+    },
+
+    resumoAvaliacao: {
+      totalFatoresAvaliados,
+      totalRespondentes: totalRespostas,
+      totalColaboradores,
+      taxaParticipacao,
+      periodoAvaliacao,
+      observacao: 'Os resultados detalhados da avaliacao encontram-se nos documentos subsequentes deste programa.'
+    }
+  }
+}
 // ============================================================
 // ROTA PRINCIPAL — POST /api/pgr/gerar
 // ============================================================
@@ -607,9 +765,9 @@ export async function POST(request: NextRequest) {
     const totalRespostas = respostas.length
     if (totalRespostas === 0) return NextResponse.json({ error: 'Nao ha respostas coletadas' }, { status: 400 })
 
-    const setoresEmpresa = await prisma.setor.findMany({
+        const setoresEmpresa = await prisma.setor.findMany({
       where: { empresaId: auth.empresaId },
-      select: { totalColaboradores: true }
+      select: { nome: true, totalColaboradores: true, turnos: true }
     })
     const totalColaboradores = setoresEmpresa.reduce((s, se) => s + se.totalColaboradores, 0)
 
@@ -814,7 +972,7 @@ export async function POST(request: NextRequest) {
       lei14457: { descricao: 'Lei 14.457/2022 — Prevencao ao Assedio', status: 'VERIFICAR', evidencia: 'Fator de relacoes interpessoais avaliado. Verificar canal de denuncia e CIPA.' }
     }
 
-    // ============================================================
+        // ============================================================
     // GERAR NOVOS DOCUMENTOS
     // ============================================================
     const nomeEmpresa = questionario.empresa.nomeFantasia
@@ -840,7 +998,38 @@ export async function POST(request: NextRequest) {
     })
     const novaVersao = pgrExistente ? pgrExistente.versao + 1 : 1
 
-    const pgr = await prisma.pGR.create({
+    const doc01Apresentacao = gerarDoc01Apresentacao(
+      {
+        razaoSocial: questionario.empresa.razaoSocial,
+        nomeFantasia: questionario.empresa.nomeFantasia,
+        cnpj: questionario.empresa.cnpj,
+        endereco: questionario.empresa.endereco,
+        cidade: questionario.empresa.cidade,
+        estado: questionario.empresa.estado,
+        cep: questionario.empresa.cep,
+        cnae: questionario.empresa.cnae,
+        descricaoCnae: questionario.empresa.descricaoCnae,
+        grauRisco: questionario.empresa.grauRisco,
+        telefone: questionario.empresa.telefone,
+        email: questionario.empresa.email,
+        responsavelNome: questionario.empresa.responsavelNome,
+        responsavelCargo: questionario.empresa.responsavelCargo,
+        responsavelRegistro: questionario.empresa.responsavelRegistro,
+        porte: questionario.empresa.porte,
+        segmento: questionario.empresa.segmento
+      },
+      setoresEmpresa.map(s => ({
+        nome: s.nome,
+        totalColaboradores: s.totalColaboradores,
+        turnos: s.turnos
+      })),
+      totalColaboradores,
+      totalRespostas,
+      inventario.length,
+      periodoAvaliacao,
+      novaVersao
+    )
+const pgr = await prisma.pGR.create({
       data: {
         titulo: `PGR Psicossocial — ${nomeEmpresa} — v${novaVersao}`,
         versao: novaVersao,
@@ -871,7 +1060,9 @@ export async function POST(request: NextRequest) {
         indicadoresSaudeJSON: JSON.stringify(indicadoresSaude),
         declaracaoConformidade: declaracao,
         parecerTecnico: parecer,
+        doc01ApresentacaoJSON: JSON.stringify(doc01Apresentacao),
         empresaId: auth.empresaId
+
       }
     })
 
@@ -887,8 +1078,9 @@ export async function POST(request: NextRequest) {
       fatoresCriticos: indicadores.fatoresCriticos,
       fatoresAltos: indicadores.fatoresAltos,
       totalMedidasRecomendadas: planoAcao.length,
-      documentosGerados: ['inventario', 'matriz', 'apr', 'relatorioAvaliacao', 'planoAcao', 'cronograma', 'conformidade', 'monitoramento', 'politicaSST', 'comunicacao', 'relatorioISO45003', 'indicadoresSaude', 'declaracaoConformidade', 'parecerTecnico'],
-      message: 'PGR gerado com sucesso — 14 documentos'
+            documentosGerados: ['doc01Apresentacao', 'inventario', 'matriz', 'apr', 'relatorioAvaliacao', 'planoAcao', 'cronograma', 'conformidade', 'monitoramento', 'politicaSST', 'comunicacao', 'relatorioISO45003', 'indicadoresSaude', 'declaracaoConformidade', 'parecerTecnico'],
+      message: 'PGR gerado com sucesso — 15 documentos'
+
     }, { status: 201 })
 
   } catch (error) {

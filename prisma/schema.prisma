@@ -17,8 +17,12 @@ model Empresa {
   endereco            String?
   cidade              String?
   estado              String?
+  cep                 String?          // ← NOVO
   telefone            String?
   email               String?
+  cnae                String?          // ← NOVO
+  descricaoCnae       String?          // ← NOVO
+  grauRisco           String?          // ← NOVO
   responsavelNome     String?
   responsavelCargo    String?
   responsavelRegistro String?
@@ -193,6 +197,7 @@ model PGR {
   indicadoresSaudeJSON   String?
   declaracaoConformidade String?
   parecerTecnico         String?
+  doc01ApresentacaoJSON  String?
   empresaId              String
   createdAt              DateTime  @default(now())
   updatedAt              DateTime  @updatedAt
